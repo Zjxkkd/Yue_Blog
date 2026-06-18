@@ -25,7 +25,9 @@
       "mcp__chrome-devtools__list_network_requests",
       "mcp__chrome-devtools__list_console_messages",
       "Bash(touch E:/MyBlog/astro-koharu-4.1.0/dist/.nojekyll)",
-      "Bash(git commit -m 'fix: add .nojekyll to prevent Jekyll from ignoring _astro *)"
+      "Bash(git commit -m 'fix: add .nojekyll to prevent Jekyll from ignoring _astro *)",
+      "Bash(touch .nojekyll)",
+      "Bash(git commit *)"
     ]
   },
   "enableAllProjectMcpServers": true,
