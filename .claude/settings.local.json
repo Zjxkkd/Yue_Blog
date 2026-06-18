@@ -11,7 +11,21 @@
       "Bash(git add *)",
       "Bash(git commit -m 'feat: initial astro-koharu 4.1.0 setup *)",
       "mcp__chrome-devtools__new_page",
-      "mcp__chrome-devtools__take_snapshot"
+      "mcp__chrome-devtools__take_snapshot",
+      "Bash(git push *)",
+      "mcp__chrome-devtools__navigate_page",
+      "mcp__chrome-devtools__take_screenshot",
+      "mcp__chrome-devtools__evaluate_script",
+      "Bash(curl -sL https://zjxkkd.github.io/)",
+      "Bash(curl -sL https://api.github.com/repos/Zjxkkd/zjxkkd.github.io/branches/main)",
+      "Bash(curl *)",
+      "Bash(gh auth *)",
+      "Bash(gh api *)",
+      "Bash(python3 -c \"import sys,json; [print\\(i['name']\\) for i in json.load\\(sys.stdin\\)]\")",
+      "mcp__chrome-devtools__list_network_requests",
+      "mcp__chrome-devtools__list_console_messages",
+      "Bash(touch E:/MyBlog/astro-koharu-4.1.0/dist/.nojekyll)",
+      "Bash(git commit -m 'fix: add .nojekyll to prevent Jekyll from ignoring _astro *)"
     ]
   },
   "enableAllProjectMcpServers": true,
