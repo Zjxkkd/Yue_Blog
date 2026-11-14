@@ -4,26 +4,23 @@
 
 ```
 GitHub  Zjxkkd/zjxkkd.github.io   main（只放源码）
-        │  push 触发 Pages 的 Git 集成
+        │  push
         ▼
-Cloudflare Pages  zjxkkd-github-io
-        │  pnpm install（自动）→ pnpm build → 发布 dist/
+GitHub Actions  Deploy
+        │  pnpm install --frozen-lockfile → pnpm build → wrangler pages deploy dist
+        ▼
+Cloudflare Pages  zjxkkd-github-io（Direct Upload，生产分支 main）
+        │  自定义域名
         ▼
 https://cloudmoon7.top
 ```
 
-Pages 项目设置（在 Cloudflare 控制台 **Workers & Pages → zjxkkd-github-io → Settings → Build** 可以看到同一份）：
+关键事实（2026-11-14 实测）：
 
-| 项 | 值 |
-|---|---|
-| 生产分支 | `main` |
-| Build command | `pnpm build` |
-| Build output directory | `dist` |
-| Root directory | （空） |
-| 环境变量 | `NODE_VERSION=22`、`PNPM_VERSION=9.15.1` |
-
-> 这两个环境变量是必须的：Pages 默认镜像的 Node 版本带不动 Astro 5 + Vite 7，
-> 锁到 22 才能稳定构建。
+- 站点托管在 **Cloudflare Pages**，项目名 `zjxkkd-github-io`，不是 Workers（账号里没有同名 Worker）。
+- 这个 Pages 项目走的是**直接上传（Direct Upload）**通道：`wrangler pages deploy` 可用，`/pages/projects/{name}/deployments` 接口要求传文件清单。
+- 在 `main` 上 push **没有**自动触发 Pages 构建（观察了 10 分钟没有新 deployment），
+  所以发布一律以 Actions 里的 `wrangler pages deploy` 为准。
 
 ## 日常发布
 
@@ -33,22 +30,32 @@ git commit -m "post: 文章标题"
 git push origin main
 ```
 
-推送后到 Cloudflare 控制台 **Deployments** 看这次构建；也可以直接看 Pages 给的预览地址。
-构建期间旧版本继续在线，构建失败也不会影响访问。
+推送后到仓库 **Actions → Deploy** 看这次运行；成功后会打印 `Deployment complete!` 和预览地址。
+构建期间旧版本继续在线，失败也不影响访问。
 
-## 本地预览
+## 本地手动发版
 
-```bash
-pnpm dev      # 开发服务器
-pnpm build    # 只构建到 dist/
-pnpm preview  # 预览 dist/
+```powershell
+$env:CLOUDFLARE_API_TOKEN = "<token>"
+$env:CLOUDFLARE_ACCOUNT_ID = "794c1c6d41415b258d3cc26c82c25282"
+pnpm build
+pnpm deploy        # = wrangler pages deploy dist --project-name zjxkkd-github-io --branch main
 ```
+
+> `--branch main` 与项目的生产分支一致，这样上传的才是 production 部署；换成别的分支名只会得到预览部署。
+
+## 需要的仓库 Secrets
+
+| Secret | 说明 |
+|---|---|
+| `CLOUDFLARE_API_TOKEN` | 需要 `Account · Cloudflare Pages · Edit`、`Zone · Zone · Read`、`Zone · Cache Purge · Purge` |
+| `CLOUDFLARE_ACCOUNT_ID` | `794c1c6d41415b258d3cc26c82c25282`（32 位十六进制） |
 
 ## 缓存策略
 
-`public/_headers` 由 Pages 读取：
+`public/_headers` 由 Pages 读取并应用到线上：
 
-- `/ _astro/*`、`/fonts/*` → 一年 `immutable`（文件名带内容哈希）
+- `/_astro/*`、`/fonts/*` → 一年 `immutable`（文件名带内容哈希）
 - `/img/*` → 一周
 - `/pagefind/*` → 一小时
 - HTML → `max-age=0, must-revalidate`
@@ -56,20 +63,16 @@ pnpm preview  # 预览 dist/
 ## 回滚
 
 Cloudflare 控制台 → **Workers & Pages → zjxkkd-github-io → Deployments** →
-选上一个成功的 production 部署 → **Rollback**。
-源码侧 `git revert` 后重新 push 也可以回到旧版本。
+选中一个历史 production 部署 → **Rollback**。
+源码侧 `git revert` 后重新 push 也可以。
 
 ## 关于 GitHub Pages
 
-之前同一个 `main` 分支还被 GitHub Pages 当成站点发布（`https://zjxkkd.github.io`），
-和自定义域名形成重复内容。现在站点只由 Cloudflare Pages 提供，
-GitHub Pages 已在仓库 **Settings → Pages** 里关闭；如果以后又看到它上线，请再关一次。
+`zjxkkd.github.io` 这个仓库名的 Pages **无法关闭**（GitHub 对 `<user>.github.io` 仓库强制开启，API 返回 `422 Deactivating GitHub pages for this repository is not allowed`）。
+现在 `main` 只放源码、没有 `index.html`，所以它只会给出 404，不再和自定义域名抢内容；
+如果以后想让 `zjxkkd.github.io` 友好跳转，可以在仓库根放一个只做跳转的 `index.html`（会牺牲「main 只放源码」这条原则，按需取舍）。
 
-## 历史：为什么没有用 Workers + GitHub Actions
+## 历史遗留
 
-一开始设想的是「Actions 里 `wrangler deploy` 把 `dist` 推到 Cloudflare Worker」，
-排查后确认这个站实际托管在 **Cloudflare Pages**（`zjxkkd-github-io.pages.dev`），
-账号里并没有同名 Worker，`cloudflare/workers-autoconfig` 分支只是当时没生效的自动配置残留。
-
-因此最终采用 Pages 自带的 Git 构建：少一条 GitHub Actions 链路，构建缓存、预览部署都由 Pages 提供。
-仓库里与 Workers 相关的 `wrangler.jsonc`、`.github/workflows/deploy.yml` 与 `wrangler` 依赖已移除。
+- `cloudflare/workers-autoconfig` 分支是早期 Workers 自动配置的残留，与当前部署无关，可以删除。
+- 早期尝试过 Workers + `wrangler deploy`，方向错误（站点不在 Workers），相关文件已移除。
