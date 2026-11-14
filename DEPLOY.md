@@ -3,7 +3,7 @@
 ## 现在怎么发版
 
 ```
-GitHub  Zjxkkd/zjxkkd.github.io   main（只放源码）
+GitHub  Zjxkkd/Yue_Blog   main（只放源码）
         │  push
         ▼
 GitHub Actions  Deploy
@@ -68,11 +68,13 @@ Cloudflare 控制台 → **Workers & Pages → zjxkkd-github-io → Deployments*
 
 ## 关于 GitHub Pages
 
-`zjxkkd.github.io` 这个仓库名的 Pages **无法关闭**（GitHub 对 `<user>.github.io` 仓库强制开启，API 返回 `422 Deactivating GitHub pages for this repository is not allowed`）。
-现在 `main` 只放源码、没有 `index.html`，所以它只会给出 404，不再和自定义域名抢内容；
-如果以后想让 `zjxkkd.github.io` 友好跳转，可以在仓库根放一个只做跳转的 `index.html`（会牺牲「main 只放源码」这条原则，按需取舍）。
+仓库原名 `zjxkkd.github.io`（`<user>.github.io` 这种名字会被 GitHub 强制开启 Pages，API 无法关闭）。
+2026-11-14 已把仓库改名为 **`Yue_Blog`**，改名后 Pages 才被真正关掉，`gh-pages` 跳转分支也已删除。
+
+现在 `https://zjxkkd.github.io/` 返回 404，站点只由 `https://cloudmoon7.top/` 提供，不存在重复内容。
+GitHub 会为旧仓库地址保留跳转，老的 clone 地址和网页链接仍然可用。
 
 ## 历史遗留
 
-- `cloudflare/workers-autoconfig` 分支是早期 Workers 自动配置的残留，与当前部署无关，可以删除。
+- `cloudflare/workers-autoconfig` 分支（早期 Workers 自动配置残留）已删除。
 - 早期尝试过 Workers + `wrangler deploy`，方向错误（站点不在 Workers），相关文件已移除。
