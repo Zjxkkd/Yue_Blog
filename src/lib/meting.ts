@@ -84,6 +84,22 @@ function isMetingSong(obj: unknown): obj is MetingSong {
   return typeof o.name === 'string' && typeof o.artist === 'string' && typeof o.url === 'string';
 }
 
+/** Force HTTP URLs in Meting responses to HTTPS to avoid Mixed Content on HTTPS sites. */
+function upgradeToHttps(url: string): string {
+  if (!url) return url;
+  if (url.startsWith('http://')) return 'https://' + url.slice(7);
+  return url;
+}
+
+function upgradeSong(song: MetingSong): MetingSong {
+  return {
+    ...song,
+    url: upgradeToHttps(song.url),
+    pic: upgradeToHttps(song.pic),
+    lrc: upgradeToHttps(song.lrc),
+  };
+}
+
 /** Fetch songs from Meting API for a single parsed URL. */
 export async function fetchMeting(server: string, type: string, id: string, apiUrl?: string): Promise<MetingSong[]> {
   const cacheKey = getCacheKey(server, type, id);
@@ -98,7 +114,7 @@ export async function fetchMeting(server: string, type: string, id: string, apiU
 
   const data: unknown = await response.json();
   if (!Array.isArray(data)) return [];
-  const songs = data.filter(isMetingSong) as MetingSong[];
+  const songs = data.filter(isMetingSong).map(upgradeSong) as MetingSong[];
   if (songs.length > 0) setCache(cacheKey, songs);
   return songs;
 }

@@ -1,0 +1,19 @@
+# 通用兜底：HTML 与未命中规则的资源
+/*
+  Cache-Control: public, max-age=0, must-revalidate
+
+# 内容哈希命名的构建产物，可以长期强缓存
+/_astro/*
+  Cache-Control: public, max-age=31536000, immutable
+
+# 字体分片（文件名固定，但内容稳定）
+/fonts/*
+  Cache-Control: public, max-age=31536000, immutable
+
+# 图片等静态资源
+/img/*
+  Cache-Control: public, max-age=604800
+
+# Pagefind 搜索索引（随构建变化，不跟着 HTML 一起失效即可）
+/pagefind/*
+  Cache-Control: public, max-age=3600

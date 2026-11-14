@@ -11,6 +11,7 @@
     "generate:summaries:force": "npx tsx src/scripts/generateSummaries.ts --force",
     "generate:all": "npm run generate:lqips && npm run generate:summaries && npm run generate:similarities",
     "build": "astro build",
+    "deploy": "wrangler deploy",
     "preview": "astro preview",
     "astro": "astro",
     "check": "astro check",
@@ -151,6 +152,7 @@
     "typescript": "^5.9.3",
     "vite": "^7.3.1",
     "vite-plugin-svgr": "^4.5.0",
+    "wrangler": "^4.162.0",
     "yaml": "^2.8.2"
   },
   "lint-staged": {

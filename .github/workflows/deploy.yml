@@ -1,0 +1,85 @@
+name: Deploy
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: deploy-production
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v6
+        with:
+          version: 9.15.1
+
+      - name: Setup Node
+        uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Build site
+        run: pnpm build
+        env:
+          NODE_OPTIONS: --max-old-space-size=4096
+
+      - name: Deploy to Cloudflare Workers
+        env:
+          RAW_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          RAW_ACCOUNT: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: |
+          # Secret 里常混进空格/换行/引号/Bearer 前缀，先清洗再校验
+          TOKEN=$(printf '%s' "$RAW_TOKEN" | tr -d '[:space:]')
+          TOKEN=${TOKEN#Bearer}
+          TOKEN=${TOKEN#bearer}
+          TOKEN=${TOKEN//\"/}
+          echo "CLOUDFLARE_API_TOKEN 长度: ${#TOKEN}"
+          echo "::add-mask::$TOKEN"
+          # 兼容 40 位经典格式与 cfk_ 前缀的新格式，只要没有空格且长度合理即可
+          if ! printf '%s' "$TOKEN" | grep -Eq '^[A-Za-z0-9_-]{20,200}$'; then
+            echo "::error::CLOUDFLARE_API_TOKEN 格式不对：只允许字母/数字/-/_，且不应含空格或换行"
+            exit 1
+          fi
+          echo "CLOUDFLARE_API_TOKEN=$TOKEN" >> "$GITHUB_ENV"
+          export CLOUDFLARE_API_TOKEN="$TOKEN"
+
+          ACCOUNT=$(printf '%s' "$RAW_ACCOUNT" | tr -d '[:space:]')
+          if printf '%s' "$ACCOUNT" | grep -Eq '^[0-9a-fA-F]{32}$'; then
+            echo "CLOUDFLARE_ACCOUNT_ID=$ACCOUNT" >> "$GITHUB_ENV"
+            export CLOUDFLARE_ACCOUNT_ID="$ACCOUNT"
+          else
+            echo "::warning::CLOUDFLARE_ACCOUNT_ID 格式不对（应为 32 位十六进制），改为从 Token 推断账号"
+          fi
+
+          pnpm exec wrangler whoami || true
+          pnpm exec wrangler deploy
+
+      # 删掉的文章/页面会残留边缘缓存，发布后顺手清一次
+      - name: Purge Cloudflare cache
+        run: |
+          ZONE_ID=$(curl -sS -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN" \
+            "https://api.cloudflare.com/client/v4/zones?name=cloudmoon7.top" | jq -r '.result[0].id // empty')
+          if [ -z "$ZONE_ID" ]; then
+            echo "zone cloudmoon7.top not found (token may lack Zone:Read), skip purge"
+            exit 0
+          fi
+          curl -sS -X POST "https://api.cloudflare.com/client/v4/zones/$ZONE_ID/purge_cache" \
+            -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN" \
+            -H "Content-Type: application/json" \
+            --data '{"purge_everything":true}' | jq -r '.success'
